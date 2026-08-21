@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models/database');
+const { isValidUrl } = require('../utils/validators');
 
 // Helper to promisify db methods
 const run = (sql, params) => new Promise((resolve, reject) => {
@@ -23,6 +24,10 @@ router.post('/urls', async (req, res) => {
   
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
+  }
+
+  if (!isValidUrl(url)) {
+    return res.status(400).json({ error: 'Invalid URL. Must be a valid http:// or https:// URL' });
   }
 
   const shortCode = Math.random().toString(36).substring(2, 8);
