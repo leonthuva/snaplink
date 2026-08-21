@@ -2,11 +2,31 @@ const express = require('express');
 const router = express.Router();
 const Bookmark = require('../models/bookmark');
 const { validateBookmark } = require('../middleware');
+const { processUrl } = require('../services/aiProcessor');
+const { isValidUrl } = require('../utils/validators');
 
 // Create bookmark
 router.post('/bookmarks', validateBookmark, async (req, res) => {
+  const { url } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
+  }
+
+  if (!isValidUrl(url)) {
+    return res.status(400).json({ error: 'Invalid URL. Must be a valid http:// or https:// URL' });
+  }
+
   try {
-    const bookmark = await Bookmark.create(req.body);
+    let { tags, summary, ...rest } = req.body;
+
+    if (!tags || !summary) {
+      const aiResult = await processUrl(url);
+      tags = tags || aiResult.tags;
+      summary = summary || aiResult.summary;
+    }
+
+    const bookmark = await Bookmark.create({ ...rest, tags, summary });
     res.status(201).json(bookmark);
   } catch (err) {
     res.status(500).json({ error: 'Database error' });
